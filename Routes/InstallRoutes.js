@@ -12,6 +12,6 @@ router.post('/installations', createInstallation);
 router.get('/installations/:productId', getInstallationByProductId);
 router.put('/installations/:productId', updateInstallationByProductId);
 router.delete('/installations/:productId', deleteInstallationByProductId);
-router.get('/products/with-installation', getAllProductsWithInstallation);
+router.get('/installations/products/with-installation', getAllProductsWithInstallation);
 
 module.exports = router;

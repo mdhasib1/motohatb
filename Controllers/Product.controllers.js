@@ -3,53 +3,59 @@ const {Category} = require('../Models/Category.model');
 const {User} = require('../Models/User.model');
 
 const createProduct = async (req, res) => {
+
+  console.log(req.body)
   try {
+    const userId = req.user._id; 
+
     const {
       name,
       description,
       price,
-      category,
-      image,
+      selectedCategory,
+      imageLinks,
       metaData,
       metaDescription,
       categoryInputFields,
       deliveryOptions,
       paymentMethods,
-      stock,
+      productStock,
       weight,
       costOfGoods,
+      variants,
+      variantImages
     } = req.body;
 
-    const createdBy = req.user._id;
-
-    if (!category || !createdBy) {
-      return res.status(400).json({ success: false, error: 'Category and createdBy are required' });
-    }
-
-    const cat = await Category.findById(category);
-    if (!cat) {
-      return res.status(404).json({ success: false, error: 'Category not found' });
-    }
     const categoryInputData = categoryInputFields.reduce((acc, { fieldName, value }) => {
       acc[fieldName] = value;
       return acc;
     }, {});
 
+    const mappedVariants = variants.map((variant, index) => ({
+      name: variant.variantName,
+      price: variant.variantPrice,
+      weight: variant.variantWeight,
+      stock: variant.variantStock || 0,
+      images: variantImages[index] || []
+    }));
+
     const newProduct = new Product({
       name,
       description,
       price,
-      category,
-      images:image,
-      categoryInputData:categoryInputData,
-      createdBy,
-      deliveryOptions: deliveryOptions,
-      paymentMethods: paymentMethods,
+      selectedCategory,
+      images:imageLinks,
+      categoryInputData,
+      deliveryOptions,
+      paymentMethods,
       metaData,
       metaDescription,
-      stock,
+      stock:productStock,
       weight,
       costOfGoods,
+      variants: mappedVariants,
+      user: userId,
+      category: selectedCategory 
     });
 
     await newProduct.save();
@@ -134,4 +140,22 @@ const getAllProducts = async (req, res) => {
 };
 
 
-module.exports = { createProduct, updateProduct, getProductById,getAllProducts };
+const deleteProduct = async (req, res) => {
+  try {
+    const productId = req.params.id;
+    console.log(productId)
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ success: false, error: 'Product not found' });
+    }
+    await Product.findByIdAndDelete(productId);
+
+    res.status(200).json({ success: true, message: 'Product deleted successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, error: 'Server Error' });
+  }
+};
+
+
+module.exports = { createProduct, updateProduct, getProductById,getAllProducts,deleteProduct };

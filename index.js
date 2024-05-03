@@ -10,6 +10,7 @@ const errorHandler = require("./Middleware/errorMiddleware");
 const dotenv = require("dotenv").config();
 const cors = require("cors");
 const app = express();
+const path = require('path');
 
 const chatRoutes = require('./Routes/ChatRoutes')
 const categories = require('./Routes/Category')
@@ -52,10 +53,16 @@ app.use('/api', serviceCategoryRoutes);
 app.use('/api', seller(io));
 app.use('/api',installation);
 
+const reactAppBuildPath = path.join(__dirname, '..', 'frontend', 'motohat');
+app.use(express.static(reactAppBuildPath));
+app.get('*', (req, res) => {
+  res.sendFile(path.join(reactAppBuildPath, 'index.html'));
+});
+
 app.use(errorHandler);
 io.on('connection', socketHandler);
 
-const PORT = process.env.PORT || 8000;
+const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Server Running on port ${PORT}`);
 });

@@ -14,7 +14,7 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['affiliator','customer',],
+    enum: ['seller', 'manager', 'affiliator', 'customer', 'admin'],
     default: 'customer'
   },
   fullName: {
@@ -25,31 +25,61 @@ const userSchema = new mongoose.Schema({
   avatar: {
     type: String
   },
-  permissions: {
-    orders: {
-      add: { type: Boolean, default: false }
-    }
-  },
-  referrals: [{ product: String, link: String }],
   phone: {
     type: String,
     required: true
   },
-  city: {
-    type: String
+  billingAddress: {
+    city: { type: String },
+    district: { type: String },
+    thana: { type: String },
+    postcode: { type: String },
+    zone_id: { type: String },
+    area_id: { type: String },
+    union: { type: String },
+    address: { type: String },
+    area: { type: String },
   },
-  district: {
-    type: String
+  shippingAddress: {
+    city: { type: String },
+    district: { type: String },
+    thana: { type: String },
+    postcode: { type: String },
+    zone_id: { type: String },
+    area_id: { type: String },
+    union: { type: String },
+    address: { type: String },
+    area: { type: String },
   },
-  thana: {
-    type: String
+  seller_business_name: {
+    type: String, 
+    required: function() { return this.role === 'seller'; },
+    trim: true
   },
-  address: {
-    type: String
+  referralLinks: {
+    type: [{
+      link: { type: String, unique: true, sparse: true }, 
+      clicks: { type: Number, default: 0 },
+      successfulPurchases: { type: Number, default: 0 }
+    }],
+    required: function() { return this.role === 'affiliator'; }
   },
-  zipcode: {
-    type: String
+  permissions: {
+    products: {
+      create: { type: Boolean, default: false },
+      edit: { type: Boolean, default: false },
+      delete: { type: Boolean, default: false }
+    },
+    orders: {
+      add: { type: Boolean, default: false }
+    },
+    users: {
+      add: { type: Boolean, default: false },
+      chat: { type: Boolean, default: false }
+    }
   },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now },
   chats: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Chat'
@@ -66,33 +96,14 @@ userSchema.pre('save', async function (next) {
   }
 });
 
-
 userSchema.methods.comparePassword = async function (candidatePassword) {
   try {
     return await bcrypt.compare(candidatePassword, this.password);
   } catch (error) {
     throw error;
   }
-}
-
-
-userSchema.pre('save', function (next) {
-  if (this.role === 'admin' || this.role === 'manager') {
-    this.permissions.users.chat = true;
-  }
-  next();
-});
+};
 
 const User = mongoose.model('User', userSchema);
 
-const trashUserSchema = new mongoose.Schema({
-  originalUserId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  }
-});
-
-const TrashUser = mongoose.model('TrashUser', trashUserSchema);
-
-module.exports = {User,TrashUser};
+module.exports = User;

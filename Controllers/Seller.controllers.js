@@ -1,4 +1,4 @@
-const {Seller} = require('../Models/Seller.model');
+const User = require('../Models/User.model');
 const Store = require('../Models/Store.model');
 const sendEmail = require("../Utils/Noreply");
 const bcrypt = require('bcrypt');
@@ -63,8 +63,8 @@ const SellerController = {
           } = req.body;
       
 
-          const existingSeller = await Seller.findOne({ $or: [{ seller_email }, { seller_mobile }] });
-          const existingSellerBusinessName = await Seller.findOne({seller_business_name });
+          const existingSeller = await User.findOne({ $or: [{ email:seller_email }, { phone:seller_mobile }] });
+          const existingSellerBusinessName = await User.findOne({seller_business_name:seller_business_name });
           if (existingSellerBusinessName) {
             return res.status(400).json({ message: 'Seller Business Name already exists' });
           }
@@ -78,24 +78,41 @@ const SellerController = {
             const area_id = seller_area_id.area_id;
 
 
-          const newSeller = new Seller({
-            seller_fullName,
-            seller_email,
-            seller_password,
-            seller_business_name,
-            seller_address: {
-                city,
-                district,
-                thana,
-                postcode: seller_postcode,
-                zone_id: seller_zone_id.zone_id,
-                area_id,
-                seller_union: seller_postcode, 
-                seller_address,
-                seller_area:seller_postcode
-            },
-            seller_mobile
-          });
+            const newSeller = new User({
+                fullName: seller_fullName,
+                email: seller_email,
+                password: seller_password,
+                role: 'seller',
+            
+                seller_business_name: seller_business_name,
+                billingAddress: {
+                    city,
+                    district,
+                    thana,
+                    postcode: seller_postcode,
+                    zone_id: seller_zone_id.zone_id,
+                    area_id,
+                    union: seller_postcode,
+                    address:seller_address,
+                    area: seller_postcode
+                },
+                phone: seller_mobile,
+                permissions: {
+                    products: {
+                        create: true,
+                        edit: true,
+                        delete: true
+                    },
+                    orders: {
+                        add: true
+                    },
+                    users: {
+                        add: false,
+                        chat: false
+                    }
+                }
+            });
+            
 
           const savedSeller = await newSeller.save();
           io.emit('savedSellerRegistered', { user: savedSeller });
@@ -119,6 +136,8 @@ const SellerController = {
               area_id: seller_area_id.area_id 
             })
           });
+
+          console.log(response)
           
           const storeData = await response.json();
           console.log(storeData);
@@ -152,7 +171,7 @@ const SellerController = {
             const customizedMessage = htmlTemplate.replace('3573', otp); 
 
             const sent_from = process.env.EMAIL_USER_NOREPLY;
-            const send_to = savedSeller.seller_email; 
+            const send_to = savedSeller.email; 
             const emailHeader = 'Welcome to MotoHat!'
             const subject = "OTP for MOTOHAT";
             await sendEmail(
@@ -162,7 +181,7 @@ const SellerController = {
                 sent_from,
                 emailHeader
             );
-      res.status(201).json({ message: 'Affiliate registered successfully', user: savedSeller });
+      res.status(201).json({ message: 'Seller registered successfully', user: savedSeller });
     } catch (error) {
       console.error('Error:', error);
       res.status(500).json({ message: 'Internal server error' });

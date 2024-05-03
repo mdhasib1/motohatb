@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
-const productSchema = new mongoose.Schema({
+const productSchema = new Schema({
   name: {
     type: String,
     required: true
@@ -29,9 +29,10 @@ const productSchema = new mongoose.Schema({
     type: Object,
     required: true
   },
-  createdBy: {
-    id: { type: Schema.Types.ObjectId, required: true, refPath: 'creatorType' },
-    type: { type: String, required: true, enum: ['SuperAdmin', 'Seller'] },
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
   },
   createdAt: {
     type: Date,
@@ -44,13 +45,14 @@ const productSchema = new mongoose.Schema({
   deliveryOptions: [
     {
       type: String,
-      enum: ['1-hour express delivery', '1-day delivery', 'standard delivery']
+      enum: ['1-hour express delivery', '1-day delivery', 'standard delivery'],
+      default:'standard delivery'
     }
   ],
   paymentMethods: [
     {
       type: String,
-      enum: ['COD', 'gateway']
+      enum: ['COD', 'online payment']
     }
   ],
   metaData: {
@@ -65,7 +67,7 @@ const productSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'approved',],
+    enum: ['pending', 'approved'],
     default: 'pending'
   },
   weight: {
@@ -75,7 +77,28 @@ const productSchema = new mongoose.Schema({
   deleted: {
     type: Boolean,
     default: false
-  }
+  },
+  variants: [{
+    name: {
+      type: String,
+      required: true
+    },
+    price: {
+      type: Number,
+      required: true
+    },
+    weight: {
+      type: Number,
+      required: true
+    },
+    stock: {
+      type: Number,
+      default: 0
+    },
+    images: [{
+      type: String
+    }]
+  }]
 });
 
 const Product = mongoose.model('Product', productSchema);

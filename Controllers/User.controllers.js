@@ -1,4 +1,4 @@
-const {User} = require("../Models/User.model");
+const User = require("../Models/User.model");
 const sendOtp = require("./Otp.controllers");
 const bcrypt = require("bcrypt");
 const Otp = require("../Models/Otp.model");
@@ -71,6 +71,9 @@ const userController = {
             res.status(500).json({ message: "Internal server error" });
         }
     },
+
+
+    
 
     login: async (req, res, io) => {
         try {

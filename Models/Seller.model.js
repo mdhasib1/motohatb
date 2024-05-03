@@ -42,6 +42,10 @@ const sellerSchema = new mongoose.Schema({
     enum: ['seller','manager',],
     default: 'seller'
   },
+
+
+  
+
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
   permissions: {
