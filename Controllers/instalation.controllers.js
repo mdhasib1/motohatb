@@ -30,11 +30,7 @@ const getInstallationByProductId = async (req, res) => {
     try {
       const { productId } = req.params;
       const installation = await Install.findOne({ productId });
-      console.log(installation)
-      if (!installation) {
-        return res.status(404).json({ message: "Installation charge not found for this product" });
-      }
-      res.status(200).json({ installation });
+      res.status(201).json({ installation });
     } catch (error) {
       res.status(500).json({ message: error.message });
     }

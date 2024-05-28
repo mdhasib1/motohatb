@@ -14,6 +14,8 @@ const userRoutes = (io) => {
     router.put('/seller/changepassword', protect, (req, res) => sellerController.changePassword(req, res, io));
     router.put('/seller/updateprofile/:sellerId', protect, (req, res) => sellerController.updateProfile(req, res, io));
     router.post('/seller/resetpassword', (req, res) => sellerController.sendPasswordResetEmail(req, res));
+    router.get('/seller_businessname', (req, res) => sellerController.getStores(req, res));
+
     return router;
 };
 

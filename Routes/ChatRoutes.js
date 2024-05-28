@@ -1,13 +1,10 @@
 const express = require('express');
-const chatControllers = require('../Controllers/Chat.controllers');
-const {protect,admin} = require("../Middleware/Protect");
+const { createChatMessage, getChats , getAdminId} = require('../Controllers/Chat.controllers');
 
+const router = express.Router();
 
-module.exports = (io) => {
-  const router = express.Router();
+router.post('/chat', createChatMessage);
+router.get('/chat/:userId1/:userId2', getChats);
+router.get('/chat/admin', getAdminId)
 
-  router.post('/send',  (req, res) => chatControllers.sendMessageToAdmin(req, res, io));
-  router.get('/get', protect, (req, res) => chatControllers.getMessagesForAdmin(req, res, io));
-
-  return router;
-};
+module.exports = router;

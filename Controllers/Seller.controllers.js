@@ -190,25 +190,27 @@ const SellerController = {
   login: async (req, res, io) => {
     try {
         const { phone, password } = req.body;
-        const seller = await Seller.findOne({ seller_mobile: phone });
+        const user = await User.findOne({ phone });
 
-        console.log(seller)
+        console.log(password)
 
-        if (!seller) {
+        if (!user) {
             return res.status(401).json({ message: "Invalid credentials." });
         }
 
-        const isPasswordValid = await bcrypt.compare(password, seller.seller_password);
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+
+        console.log(isPasswordValid)
 
         if (!isPasswordValid) {
-          return res.status(401).json({ message: "Invalid credentials." });
+            return res.status(401).json({ message: "Invalid credentials." });
         }
 
         const accessToken = jwt.sign(
             {
-                _id: seller._id,
-                email: seller.seller_email,
-                role: seller.role,
+                _id: user._id,
+                email: user.email,
+                role: user.role,
             },
             process.env.ACCESS_TOKEN_SECRET,
             {
@@ -443,6 +445,24 @@ try {
 } catch (error) {
     console.error('Error resending OTP:', error);
     res.status(500).json({ error: 'Internal server error resending OTP.' });
+}
+},
+getStores: async (req, res) => {
+try {
+    const token = await getToken();
+    const response = await fetch(`${process.env.PATHAO_API_ENDPOINT}/aladdin/api/v1/stores`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    });
+    const storeData = await response.json();
+    res.status(200).json({ message: "All Stores get successfully", storeData });
+
+} catch (error) {
+    
 }
 }
 };

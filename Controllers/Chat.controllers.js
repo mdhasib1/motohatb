@@ -1,74 +1,63 @@
 const Chat = require('../Models/Chat.model');
 const User = require('../Models/User.model');
 
-const chatControllers = {
-    sendMessageToAdmin: async (req, res, io) => {
-    const { message } = req.body;
-    let senderId;
+const createChatMessage = async (req, res) => {
+  console.log(req.body)
+  const { senderId, message, receiverId, phone } = req.body;
+  try {
+    let sender = await User.findById(senderId);
+    let roomId;
 
-    if (req.user) {
-      senderId = req.user._id;
+    if (!sender) {
+      roomId = `guest_${phone}_${receiverId}`;
+      sender = { _id: phone };
     } else {
-      senderId = 'guest-user-id';
+      roomId = `${Math.min(senderId, receiverId)}_${Math.max(senderId, receiverId)}`;
     }
 
-    try {
-      const adminUser = await User.findOne({ role: 'admin' });
-      if (!adminUser) {
-        return res.status(404).json({ message: 'Admin user not found' });
-      }
-      const newChat = new Chat({
-        senderId: senderId,
-        receiverId: adminUser._id,
-        message: message,
-        timestamp: new Date()
-      });
+    console.log(roomId)
 
-      const savedChat = await newChat.save();
+    const chat = new Chat({
+      senderId: sender._id,
+      receiverId,
+      message,
+      temporaryId: sender._id === phone ? phone : undefined,
+      roomId
+    });
 
-      io.sockets.in('admin_room').emit('newMessage', savedChat);
-
-
-      res.status(200).json({
-        success: true,
-        message: 'Message sent to admin successfully',
-        data: savedChat
-      });
-    } catch (error) {
-      console.error('Error sending message to admin:', error);
-      res.status(500).json({
-        success: false,
-        message: 'An error occurred while sending message to admin',
-        error: error.message
-      });
-    }
-  },
-
-  getMessagesForAdmin: async (req, res) => {
-    try {
-      const adminUser = await User.findOne({ role: 'admin' });
-      if (!adminUser) {
-        return res.status(404).json({ message: 'Admin user not found' });
-      }
-      const messages = await Chat.find({ receiverId: adminUser._id })
-        .populate('senderId', 'fullName')
-        .sort({ timestamp: -1 })
-        .exec();
-
-      res.status(200).json({
-        success: true,
-        messages
-      });
-    } catch (error) {
-      console.error('Error getting messages for admin:', error);
-      res.status(500).json({
-        success: false,
-        message: 'An error occurred while retrieving messages for admin',
-        error: error.message
-      });
-    }
-  },
-
+    await chat.save();
+    res.status(201).send(chat);
+  } catch (error) {
+    res.status(400).send(error);
+  }
 };
 
-module.exports = chatControllers;
+const getChats = async (req, res) => {
+  const { userId1, userId2 } = req.params;
+  try {
+    const roomId = `${Math.min(userId1, userId2)}_${Math.max(userId1, userId2)}`;
+    const chats = await Chat.find({ roomId }).sort({ timestamp: 1 });
+    res.status(200).send(chats);
+  } catch (error) {
+    res.status(400).send(error);
+  }
+};
+
+const getAdminId = async (req,res) => {
+  try {
+    const admin = await User.findOne({ role: 'admin' });
+    if (admin) {
+      res.status(200).send(admin._id);
+    } else {
+      throw new Error('Admin not found');
+    }
+  } catch (error) {
+    throw new Error(`Error getting admin ID: ${error.message}`);
+  }
+};
+
+module.exports = {
+  createChatMessage,
+  getChats,
+  getAdminId
+};

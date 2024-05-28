@@ -19,7 +19,7 @@ const productSchema = new Schema({
   },
   category: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Category',
+    ref: 'Subcategory',
     required: true
   },
   images: [{
@@ -41,6 +41,18 @@ const productSchema = new Schema({
   rating: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Rating'
+  },
+  country: {
+    type: String,
+    required: true
+  },
+  genuine: {
+    type: Boolean,
+    default: false
+  },
+  warranty: {
+    type: Boolean,
+    default: false
   },
   deliveryOptions: [
     {
@@ -67,7 +79,7 @@ const productSchema = new Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'approved'],
+    enum: ['pending', 'approved','featured'],
     default: 'pending'
   },
   weight: {

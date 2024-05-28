@@ -3,17 +3,7 @@ const User = require('../Models/User.model');
 const affiliateController = {
   register: async (req, res, io) => {
     try {
-      const { email, password, fullName, phone, role, parent_id } = req.body;
-
-      const referral_id = generateReferralId();
-
-      let parentUser = null;
-      if (parent_id) {
-        parentUser = await User.findOne({ referral_id: parent_id });
-        if (!parentUser) {
-          return res.status(400).json({ message: 'Invalid referral_id provided' });
-        }
-      }
+      const { email, password, fullName, phone, role, } = req.body;
 
       const existingUser = await User.findOne({ $or: [{ email }, { phone }] });
       if (existingUser) {
@@ -26,20 +16,9 @@ const affiliateController = {
         fullName,
         phone,
         role,
-        referral_id,
-        parent_id: parent_id ? parent_id : null,
         permissions: {
-          products: {
-            create: false,
-            edit: false,
-            delete: false,
-          },
           orders: {
             add: true,
-          },
-          users: {
-            add: false,
-            chat: false,
           },
         },
       });

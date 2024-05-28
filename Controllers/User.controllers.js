@@ -9,7 +9,15 @@ const sendEmail = require("../Utils/Noreply");
 const OTP = require('../Models/Otp.model');
 const fs = require('fs');
 const path = require('path');
+const Notification = require('../Models/Notification.model'); 
+const Chat = require('../Models/Chat.model');
 
+const linkChatsToUser = async (phone, userId) => {
+    await Chat.updateMany(
+      { temporaryId: phone },
+      { $set: { senderId: userId }, $unset: { temporaryId: "" } }
+    );
+  };
 function generateOtp() {
     return Math.floor(100000 + Math.random() * 900000).toString();
   }
@@ -32,7 +40,22 @@ const userController = {
             });
 
             const savedUser = await newUser.save();
+            await linkChatsToUser(savedUser.phone, savedUser._id);
+            const adminUser = await User.findOne({ role: 'admin' });
 
+            if (!adminUser) {
+                console.error('Admin user not found.');
+                return res.status(500).json({ message: "Admin user not found" });
+            }
+
+            const newNotification = new Notification({
+                message: `🎉 New user registered: ${savedUser.fullName} has joined our platform. Welcome aboard! 🚀`,
+                userId: adminUser._id,
+                read: false
+            });
+
+            await newNotification.save();
+            io.emit('newNotification', newNotification);
             io.emit("newUserRegistered", { user: savedUser });
             const userId = savedUser._id
             const otp = generateOtp();
@@ -72,15 +95,12 @@ const userController = {
         }
     },
 
-
-    
-
     login: async (req, res, io) => {
         try {
             const { phone, password } = req.body;
             const user = await User.findOne({ phone });
 
-            console.log(phone)
+            console.log(password)
 
             if (!user) {
                 return res.status(401).json({ message: "Invalid credentials." });
@@ -103,6 +123,7 @@ const userController = {
                     expiresIn: "1h",
                 }
             );
+            await linkChatsToUser(phone, user._id);
             res.status(201).json({ message: "Login Success", accessToken });
         } catch (error) {
             console.error("Error during login:", error);
@@ -115,6 +136,8 @@ const userController = {
             const { userId, otp } = req.body;
             const user = await User.findById(userId);
 
+            console.log(user)
+
             if (!user) {
                 return res.status(404).json({ message: "User not found." });
             }
@@ -123,6 +146,8 @@ const userController = {
                 code: otp,
                 expiresAt: { $gt: new Date() },
             });
+
+            console.log(storedOtp)
 
             if (!storedOtp) {
                 return res.status(401).json({ message: "Invalid OTP or expired." });

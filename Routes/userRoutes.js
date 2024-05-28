@@ -1,6 +1,7 @@
 const express = require('express');
 const userController = require('../Controllers/User.controllers');
 const { protect, admin } = require("../Middleware/Protect");
+const SellerController = require("../Controllers/Seller.controllers")
 
 const router = express.Router();
 

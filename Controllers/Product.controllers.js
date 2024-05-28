@@ -1,35 +1,30 @@
 const {Product} = require('../Models/Product.model');
-const {Category} = require('../Models/Category.model');
+const {Category, Subcategory} = require('../Models/Category.model');
 const {User} = require('../Models/User.model');
 
 const createProduct = async (req, res) => {
-
-  console.log(req.body)
   try {
     const userId = req.user._id; 
-
     const {
       name,
       description,
       price,
-      selectedCategory,
+      selectedSubcategory,
       imageLinks,
       metaData,
       metaDescription,
-      categoryInputFields,
-      deliveryOptions,
-      paymentMethods,
+      inputFieldValues,
+      selectedDeliveryOptions,
+      selectedPaymentMethods,
       productStock,
       weight,
       costOfGoods,
       variants,
-      variantImages
+      country,
+      variantImages,
+      genuine,
+      warranty,
     } = req.body;
-
-    const categoryInputData = categoryInputFields.reduce((acc, { fieldName, value }) => {
-      acc[fieldName] = value;
-      return acc;
-    }, {});
 
     const mappedVariants = variants.map((variant, index) => ({
       name: variant.variantName,
@@ -43,11 +38,11 @@ const createProduct = async (req, res) => {
       name,
       description,
       price,
-      selectedCategory,
+      selectedSubcategory,
       images:imageLinks,
-      categoryInputData,
-      deliveryOptions,
-      paymentMethods,
+      categoryInputData:inputFieldValues,
+      deliveryOptions:selectedDeliveryOptions,
+      paymentMethods:selectedPaymentMethods,
       metaData,
       metaDescription,
       stock:productStock,
@@ -55,7 +50,10 @@ const createProduct = async (req, res) => {
       costOfGoods,
       variants: mappedVariants,
       user: userId,
-      category: selectedCategory 
+      category: selectedSubcategory,
+      country:country,
+      genuine:genuine,
+      warranty:warranty
     });
 
     await newProduct.save();
@@ -109,13 +107,18 @@ const updateProduct = async (req, res) => {
   }
 };
 
-module.exports = { createProduct, updateProduct };
-
 
 const getProductById = async (req, res) => {
+
   try {
-    const { productId } = req.params;
-    const product = await Product.findById(productId).populate('category').populate('subcategory');
+    const { id } = req.params;
+    const product = await Product.findById(id).populate({
+      path: 'category',
+      populate: {
+        path: 'parentCategory',
+        model: 'Category'
+      }
+    });
 
     if (!product) {
       return res.status(404).json({ success: false, error: 'Product not found' });
@@ -140,6 +143,8 @@ const getAllProducts = async (req, res) => {
 };
 
 
+
+
 const deleteProduct = async (req, res) => {
   try {
     const productId = req.params.id;
@@ -157,5 +162,118 @@ const deleteProduct = async (req, res) => {
   }
 };
 
+const getDefaultProducts = async () => {
+  const count = await Product.countDocuments();
+  if (count <= 12) {
+    return await Product.find().limit(12);
+  }
 
-module.exports = { createProduct, updateProduct, getProductById,getAllProducts,deleteProduct };
+  const random = Math.floor(Math.random() * (count - 12));
+  return await Product.find().skip(random).limit(12);
+};
+
+
+const getRelatedProducts = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const product = await Product.findById(productId).populate('category');
+
+    if (!product) {
+      return res.status(404).json({ success: false, error: 'Product not found' });
+    }
+
+    let relatedProducts = await Product.find({ category: product.category, _id: { $ne: productId } }).limit(10);
+
+    if (relatedProducts.length === 0) {
+      relatedProducts = await getDefaultProducts();
+    }
+
+    res.status(200).json({ success: true, data: relatedProducts });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, error: 'Server Error' });
+  }
+};
+
+const getPopularProducts = async (req, res) => {
+  try {
+    let popularProducts = await Product.find().sort({ rating: -1 }).limit(10);
+
+    if (popularProducts.length === 0) {
+      popularProducts = await getDefaultProducts();
+    }
+
+    res.status(200).json({ success: true, data: popularProducts });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, error: 'Server Error' });
+  }
+};
+
+const getNewArrivals = async (req, res) => {
+  try {
+    let newArrivals = await Product.find().sort({ createdAt: -1 }).limit(10);
+
+    if (newArrivals.length === 0) {
+      newArrivals = await getDefaultProducts();
+    }
+
+    res.status(200).json({ success: true, data: newArrivals });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, error: 'Server Error' });
+  }
+};
+
+const getFeaturedProducts = async (req, res) => {
+  try {
+    let featuredProducts = await Product.find({ status: 'featured' }).limit(10);
+
+    if (featuredProducts.length === 0) {
+      featuredProducts = await getDefaultProducts();
+    }
+
+    res.status(200).json({ success: true, data: featuredProducts });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, error: 'Server Error' });
+  }
+};
+
+const getMostAffordableProducts = async (req, res) => {
+  try {
+    let affordableProducts = await Product.find().sort({ price: 1 }).limit(10);
+
+    if (affordableProducts.length === 0) {
+      affordableProducts = await getDefaultProducts();
+    }
+
+    res.status(200).json({ success: true, data: affordableProducts });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, error: 'Server Error' });
+  }
+};
+
+const getMostPremiumProducts = async (req, res) => {
+  try {
+    let premiumProducts = await Product.find().sort({ price: -1 }).limit(10);
+
+    if (premiumProducts.length === 0) {
+      premiumProducts = await getDefaultProducts();
+    }
+
+    res.status(200).json({ success: true, data: premiumProducts });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, error: 'Server Error' });
+  }
+};
+
+
+module.exports = { createProduct, updateProduct, getProductById,getAllProducts,deleteProduct,  getRelatedProducts,
+  getPopularProducts,
+  getNewArrivals,
+  getFeaturedProducts,
+  getMostAffordableProducts,
+  getMostPremiumProducts, };

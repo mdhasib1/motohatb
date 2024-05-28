@@ -14,15 +14,18 @@ const chatSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  temporaryId: {
+    type: String,
+    required: false
+  },
   timestamp: {
     type: Date,
     default: Date.now
+  },
+  roomId: {
+    type: String,
+    required: true
   }
-});
-
-chatSchema.pre('save', function(next) {
-  if (!this.isModified('senderId')) return next();
-  next();
 });
 
 const Chat = mongoose.model('Chat', chatSchema);
