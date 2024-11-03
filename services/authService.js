@@ -13,15 +13,11 @@ module.exports = (passport) => {
         },
 
         async (accessToken, refreshToken, profile, done) => {
-            console.log('Google profile:', profile);
-            console.log('Google accessToken:', accessToken);
-            console.log('Google refreshToken:', refreshToken);
 
             try {
                 let user = await User.findOne({ googleId: profile.id });
 
                 if (user) {
-                    console.log('Existing Google user found:', user);
                     return done(null, user);
                 } else {
                     const newUser = new User({
@@ -33,11 +29,9 @@ module.exports = (passport) => {
                     });
 
                     user = await newUser.save();
-                    console.log('New Google user created:', user);
                     return done(null, user);
                 }
             } catch (error) {
-                console.error('Error in Google strategy:', error);
                 return done(error, null);
             }
         }));

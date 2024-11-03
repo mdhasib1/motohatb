@@ -26,6 +26,17 @@ const fetchFromPathao = async (endpoint, method, token, body = null) => {
 
 
 
+/**
+ * Fetches an access token from the Pathao API.
+ *
+ * This function sends a POST request to the Pathao API endpoint to issue a token.
+ * It uses the client credentials and user credentials stored in environment variables.
+ *
+ * @async
+ * @function getToken
+ * @returns {Promise<string>} The access token from the Pathao API.
+ * @throws {Error} If the request fails or the response is not ok.
+ */
 const getToken = async () => {
   try {
     const response = await fetch(`${process.env.PATHAO_API_ENDPOINT}/aladdin/api/v1/issue-token`, {

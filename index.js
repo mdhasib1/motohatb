@@ -37,6 +37,11 @@ const coupon = require('./Routes/couponRoutes');
 const categoriessection = require('./Routes/categorySectionRoutes');
 const authentication = require('./Routes/authRoutes')
 const authService = require('./services/authService');
+const orderRoutes = require("./Routes/OrderRoutes");
+const storeRoutes = require("./Routes/storeRoutes");
+const chatController = require('./Controllers/Chat.controllers');
+const SpacialDiscountRoutes = require('./Routes/SpacialDiscountRoutes');
+
 authService(passport);
 
 app.use(
@@ -56,17 +61,20 @@ app.use(passport.session());
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: ["http://localhost:5173", "http://192.168.10.35:3000"],
+    origin: ["http://localhost:5173"],
     methods: ["GET", "POST"],
     credentials: true
   }
 });
 app.use(bodyParser.json());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 
 app.use('/api', userRoutes(io));
-app.use('/api', affiliateRoutes(io));
+app.use('/api', affiliateRoutes);
 app.use('/api', chatRoutes);
+app.use('/api', SpacialDiscountRoutes);
 app.use('/api/categories', categories);
 app.use('/api', categoriessection);
 app.use('/api', Subcategory);
@@ -89,6 +97,8 @@ app.use('/api', locationRoutes);
 app.use('/api', blog);
 app.use('/api', coupon);
 app.use('/api', authentication);
+app.use("/api/orders", orderRoutes);
+app.use("/api", storeRoutes(io));
 
 connectDB();
 
@@ -100,7 +110,22 @@ app.get('*', (req, res) => {
 });
 
 app.use(errorHandler);
-io.on('connection', socketHandler);
+io.on("connection", (socket) => {
+  console.log("New user connected:", socket.id);
+
+  socket.on("joinChat", (chatId) => {
+      socket.join(chatId);
+  });
+
+  socket.on("sendMessage", async (data) => {
+      const message = await chatController.createChat(data);
+      io.to(data.chatId).emit("messageReceived", message); 
+  });
+
+  socket.on("disconnect", () => {
+      console.log("User disconnected:", socket.id);
+  });
+});
 
 const PORT = process.env.PORT || 3000;
 

@@ -7,8 +7,9 @@ const {
   deleteInstallationByProductId,
   getAllProductsWithInstallation
 } = require('../Controllers/instalation.controllers');
+const { authenticateToken, authorizeAdmin } = require("../middlewares/authMiddleware");
 
-router.post('/installations', createInstallation);
+router.post('/installations',authenticateToken,authorizeAdmin, createInstallation);
 router.get('/installations/:productId', getInstallationByProductId);
 router.put('/installations/:productId', updateInstallationByProductId);
 router.delete('/installations/:productId', deleteInstallationByProductId);

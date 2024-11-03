@@ -4,21 +4,17 @@ const { generateToken } = require('../utils/token');
 exports.googleCallback = (req, res, next) => {
     passport.authenticate('google', { session: false }, async (err, user) => {
         if (err) {
-            console.error('Google authentication error:', err);
             return res.status(500).json({ message: 'Authentication error', error: err });
         }
 
         if (!user) {
-            console.log('Google authentication failed, no user');
             return res.status(401).json({ message: 'Authentication failed' });
         }
 
         try {
             const token = generateToken(user);
-            console.log('Google authentication successful, redirecting with token:', token);
             return res.redirect(`https://motohat.com/api/google/callback?token=${token}`);
         } catch (error) {
-            console.error('Token generation error:', error);
             return res.status(500).json({ message: 'Token generation error', error });
         }
     })(req, res, next);

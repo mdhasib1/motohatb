@@ -1,9 +1,12 @@
 const Install = require('../Models/instalation.model');
-const {Product} = require('../Models/Product.model');
+const Product = require('../Models/Product.model');
+
 
 const createInstallation = async (req, res) => {
   try {
     const { productId, installationCharge } = req.body;
+    
+    console.log("Received productId:", productId);
 
     const product = await Product.findOne({ _id: productId });
 
@@ -12,10 +15,12 @@ const createInstallation = async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
+
     const installation = new Install({
       productId,
       installationCharge
     });
+
     await installation.save();
 
     res.status(201).json({ message: "Installation charge created successfully", installation });

@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const subcategoryController = require('../Controllers/subcategoryController');
-const { protect, admin } = require("../middlewares/Protect");
+const {  authenticateToken,
+    authorizeAdmin } = require("../middlewares/Protect");
 
 
 router.post('/subcategories/:categoryId', subcategoryController.createSubcategory);

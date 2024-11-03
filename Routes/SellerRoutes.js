@@ -1,6 +1,7 @@
 const express = require('express');
 const sellerController = require('../Controllers/Seller.controllers');
-const { protect, admin } = require("../middlewares/Protect");
+const {  authenticateToken,
+    authorizeAdmin } = require("../middlewares/authMiddleware");
 
 const router = express.Router();
 
@@ -11,8 +12,8 @@ const userRoutes = (io) => {
     router.post('/seller/resend-otp', (req, res) => sellerController.resendOtp(req, res, io));
     router.get('/seller/:sellerId', (req, res) => sellerController.getUser(req, res, io));
     router.get('/sellers', (req, res) => sellerController.getUsers(req, res, io));
-    router.put('/seller/changepassword', protect, (req, res) => sellerController.changePassword(req, res, io));
-    router.put('/seller/updateprofile/:sellerId', protect, (req, res) => sellerController.updateProfile(req, res, io));
+    router.put('/seller/changepassword', authenticateToken, (req, res) => sellerController.changePassword(req, res, io));
+    router.put('/seller/updateprofile/:sellerId', authenticateToken, (req, res) => sellerController.updateProfile(req, res, io));
     router.post('/seller/resetpassword', (req, res) => sellerController.sendPasswordResetEmail(req, res));
     router.get('/seller_businessname', (req, res) => sellerController.getStores(req, res));
 

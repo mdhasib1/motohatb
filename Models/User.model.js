@@ -39,9 +39,10 @@ const userSchema = new mongoose.Schema({
   facebookId: { type: String },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
-  chats: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Chat' }]
+  chats: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Chat' }],
+  products: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }], 
+  stores: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Store' }] 
 });
-
 
 const User = mongoose.model('User', userSchema);
 module.exports = User;

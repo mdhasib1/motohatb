@@ -1,10 +1,11 @@
-const {Product} = require('../Models/Product.model');
-const {Category} = require('../Models/Category.model');
-const {User} = require('../Models/User.model');
+const Product = require('../Models/Product.model');
+const User = require('../Models/User.model');
+
+const Store  = require('../Models/Store.model');
 
 const createProduct = async (req, res) => {
   try {
-    const userId = req.user._id; 
+    const userId = req.user._id;
     const {
       name,
       description,
@@ -23,8 +24,43 @@ const createProduct = async (req, res) => {
       country,
       variantImages,
       genuine,
-      warranty,
+      warranty
     } = req.body;
+
+    const user = await User.findById(userId);
+
+    let store = await Store.findOne({ owner: userId });
+
+    let seller = null;
+
+    if (user.role === 'seller') {
+      seller = userId;
+    }
+
+    if (user.role === 'admin') {
+      if (user.stores.length > 0) {
+        store = user.stores[0]._id;
+      } else {
+        const newStore = new Store({
+          name: `${user.fullName}'s Store`,
+          description: `Admin store for ${user.fullName}`,
+          owner: userId
+        });
+
+        await newStore.save();
+        store = newStore._id;
+      }
+
+      seller = userId;
+    }
+
+    if (user.stores.length > 0 && !store) {
+      store = user.stores[0]._id;
+    }
+
+    if (!store && !seller) {
+      return res.status(400).json({ success: false, message: "User must be either a seller or own a store." });
+    }
 
     const mappedVariants = variants.map((variant, index) => ({
       name: variant.variantName,
@@ -38,26 +74,26 @@ const createProduct = async (req, res) => {
       name,
       description,
       price,
-      selectedSubcategory,
-      images:imageLinks,
-      categoryInputData:inputFieldValues,
-      deliveryOptions:selectedDeliveryOptions,
-      paymentMethods:selectedPaymentMethods,
+      costOfGoods,
+      category: selectedSubcategory,
+      images: imageLinks,
+      categoryInputData: inputFieldValues,
+      user: userId,
+      seller: seller,
+      store: store,
+      deliveryOptions: selectedDeliveryOptions,
+      paymentMethods: selectedPaymentMethods,
       metaData,
       metaDescription,
-      stock:productStock,
+      stock: productStock,
       weight,
-      costOfGoods,
       variants: mappedVariants,
-      user: userId,
-      category: selectedSubcategory,
-      country:country,
-      genuine:genuine,
-      warranty:warranty
+      country,
+      genuine,
+      warranty
     });
 
     await newProduct.save();
-
     res.status(201).json({ success: true, data: newProduct });
   } catch (error) {
     console.error(error);
@@ -66,39 +102,17 @@ const createProduct = async (req, res) => {
 };
 
 
+
 const updateProduct = async (req, res) => {
   try {
     const { productId } = req.params;
-    const {
-      name,
-      description,
-      price,
-      categoryId,
-      dynamicFields,
-      deliveryOptions,
-      paymentMethods,
-      images,
-      metaData,
-      metaDescription
-    } = req.body;
+    const updates = req.body;
 
-    const product = await Product.findById(productId);
+    const product = await Product.findOneAndUpdate({ _id: productId, deleted: false }, updates, { new: true });
+
     if (!product) {
       return res.status(404).json({ success: false, error: 'Product not found' });
     }
-
-    product.name = name;
-    product.description = description;
-    product.price = price;
-    product.category = categoryId;
-    product.dynamicFields = dynamicFields;
-    product.deliveryOptions = deliveryOptions;
-    product.paymentMethods = paymentMethods;
-    product.images = images;
-    product.metaData = metaData;
-    product.metaDescription = metaDescription;
-
-    await product.save();
 
     res.status(200).json({ success: true, data: product });
   } catch (error) {
@@ -107,12 +121,10 @@ const updateProduct = async (req, res) => {
   }
 };
 
-
 const getProductById = async (req, res) => {
-
   try {
     const { id } = req.params;
-    const product = await Product.findById(id);
+    const product = await Product.findOne({ _id: id, deleted: false }).populate('category');
 
     if (!product) {
       return res.status(404).json({ success: false, error: 'Product not found' });
@@ -127,8 +139,28 @@ const getProductById = async (req, res) => {
 
 const getAllProducts = async (req, res) => {
   try {
-    const products = await Product.find().populate('category');
-    console.log(products)
+    const products = await Product.find({ deleted: false }).populate('category');
+    res.status(200).json({ success: true, data: products });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, error: 'Server Error' });
+  }
+};
+
+
+const getAllProductsbyUser = async (req, res) => {
+  try {
+    let products;
+
+    if (req.user.role === 'admin') {
+      // Admin: Get all products
+      products = await Product.find({ deleted: false }).populate('category');
+    } else if (req.user.role === 'seller') {
+      // Seller: Get only their own products
+      products = await Product.find({ deleted: false, seller: req.user._id }).populate('category');
+    } else {
+      return res.status(403).json({ success: false, message: 'Unauthorized access' });
+    }
 
     res.status(200).json({ success: true, data: products });
   } catch (error) {
@@ -142,20 +174,41 @@ const getAllProducts = async (req, res) => {
 
 const deleteProduct = async (req, res) => {
   try {
-    const productId = req.params.id;
-    console.log(productId)
-    const product = await Product.findById(productId);
+    const { id } = req.params;
+    const product = await Product.findOne({ _id: id, deleted: false });
+
     if (!product) {
       return res.status(404).json({ success: false, error: 'Product not found' });
     }
-    await Product.findByIdAndDelete(productId);
 
-    res.status(200).json({ success: true, message: 'Product deleted successfully' });
+    product.deleted = true;
+    await product.save();
+    res.status(200).json({ success: true, message: 'Product deleted' });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, error: 'Server Error' });
   }
 };
+
+const restoreProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const product = await Product.findOne({ _id: id, deleted: true });
+
+    if (!product) {
+      return res.status(404).json({ success: false, error: 'Product not found' });
+    }
+
+    product.deleted = false;
+    await product.save();
+    res.status(200).json({ success: true, message: 'Product restored' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, error: 'Server Error' });
+  }
+};
+
+
 
 const getDefaultProducts = async () => {
   const count = await Product.countDocuments();
@@ -266,7 +319,7 @@ const getMostPremiumProducts = async (req, res) => {
 };
 
 
-module.exports = { createProduct, updateProduct, getProductById,getAllProducts,deleteProduct,  getRelatedProducts,
+module.exports = { createProduct, updateProduct,getAllProductsbyUser, getProductById,getAllProducts,deleteProduct,  getRelatedProducts,
   getPopularProducts,
   getNewArrivals,
   getFeaturedProducts,

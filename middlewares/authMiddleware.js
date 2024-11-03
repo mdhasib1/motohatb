@@ -1,56 +1,51 @@
 const jwt = require('jsonwebtoken');
 const User = require('../Models/User.model');
 
-const authenticate = async (req, res, next) => {
-  const token = req.header('Authorization')?.replace('Bearer ', '');
-  if (!token) {
-    return res.status(401).json({ message: 'Access denied. No token provided.' });
-  }
+// Middleware to authenticate access token
+const authenticateToken = async (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
 
-  try {
-    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
-    const user = await User.findById(decoded.id);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found.' });
-    }
-    req.user = user;
-    next();
-  } catch (error) {
-    res.status(400).json({ message: 'Invalid token.' });
-  }
-};
+    if (!token) return res.status(401).json({ error: 'Unauthorized' });
 
-const authorize = (roles = [], permissions = {}) => {
-  return (req, res, next) => {
-    const { user } = req;
-    
-    if (roles.length && !roles.includes(user.role)) {
-      return res.status(403).json({ message: 'Forbidden: You do not have the required role.' });
-    }
+    try {
+        // Verify the token
+        const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+        const user = await User.findById(decoded._id);
+        if (!user) return res.status(404).json({ error: 'User not found' });
 
-    const userPermissions = user.permissions || {};
-    const checkPermissions = (perm) => {
-      if (typeof permissions[perm] === 'boolean' && permissions[perm] !== userPermissions[perm]) {
-        return false;
-      } 
-      if (typeof permissions[perm] === 'object') {
-        for (const subPerm in permissions[perm]) {
-          if (permissions[perm][subPerm] !== userPermissions[perm]?.[subPerm]) {
-            return false;
-          }
+        req.user = user;
+        next();
+    } catch (error) {
+        if (error.name === 'TokenExpiredError') {
+            return res.status(403).json({ error: 'Token expired', needRefresh: true });
         }
-      }
-      return true;
-    };
-
-    for (const perm in permissions) {
-      if (!checkPermissions(perm)) {
-        return res.status(403).json({ message: 'Forbidden: You do not have the required permissions.' });
-      }
+        res.status(403).json({ error: 'Invalid token' });
     }
-    
-    next();
-  };
 };
 
-module.exports = { authenticate, authorize };
+// Endpoint to refresh token
+const refreshToken = (req, res) => {
+    const refreshToken = req.body.token;
+    if (!refreshToken) return res.status(401).json({ error: 'Unauthorized' });
+
+    // Verify refresh token
+    jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, (err, user) => {
+        if (err) return res.status(403).json({ error: 'Invalid refresh token' });
+
+        // Generate a new access token
+        const accessToken = jwt.sign({ _id: user._id }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '15m' });
+        res.json({ accessToken });
+    });
+};
+
+const authorizeAdmin = (req, res, next) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Forbidden' });
+  next();
+};
+
+module.exports = {
+    authenticateToken,
+    refreshToken,
+    authorizeAdmin,
+};

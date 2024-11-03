@@ -15,7 +15,7 @@ const createNotification = async (req, res) => {
 
 const getNotificationsByUserId = async (req, res) => {
   try {
-    const notifications = await Notification.find({ userId: req.params.userId });
+    const notifications = await Notification.find({ userId: req.params.id });
     res.status(200).json({ success: true, data: notifications });
   } catch (error) {
     console.error(error);

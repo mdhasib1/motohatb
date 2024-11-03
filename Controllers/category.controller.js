@@ -1,15 +1,18 @@
-const categoryService = require('../services/category.service');
+const Category = require('../Models/Category.model');
 
 const createCategory = async (req, res) => {
   try {
     const { name, attributes, affiliate_commission, image, parent_id } = req.body;
-    const newCategory = await categoryService.createCategory({
+
+    const newCategory = new Category({
       name,
       attributes,
       affiliate_commission,
       image,
       parent_id
     });
+
+    await newCategory.save();
     res.status(201).json({ success: true, data: newCategory });
   } catch (error) {
     console.error(error);
@@ -19,7 +22,7 @@ const createCategory = async (req, res) => {
 
 const getCategories = async (req, res) => {
   try {
-    const categories = await categoryService.getCategories();
+    const categories = await Category.find({ deleted: false }).populate('parent_id');
     res.status(200).json({ success: true, data: categories });
   } catch (error) {
     console.error(error);
@@ -30,10 +33,12 @@ const getCategories = async (req, res) => {
 const getCategoryById = async (req, res) => {
   try {
     const categoryId = req.params.id;
-    const category = await categoryService.getCategoryById(categoryId);
+    const category = await Category.findOne({ _id: categoryId, deleted: false }).populate('parent_id');
+
     if (!category) {
       return res.status(404).json({ success: false, error: 'Category not found' });
     }
+
     res.status(200).json({ success: true, data: category });
   } catch (error) {
     console.error(error);
@@ -45,7 +50,13 @@ const updateCategory = async (req, res) => {
   try {
     const categoryId = req.params.id;
     const updatedData = req.body;
-    const updatedCategory = await categoryService.updateCategory(categoryId, updatedData);
+
+    const updatedCategory = await Category.findOneAndUpdate({ _id: categoryId, deleted: false }, updatedData, { new: true });
+
+    if (!updatedCategory) {
+      return res.status(404).json({ success: false, error: 'Category not found' });
+    }
+
     res.status(200).json({ success: true, data: updatedCategory });
   } catch (error) {
     console.error(error);
@@ -53,31 +64,35 @@ const updateCategory = async (req, res) => {
   }
 };
 
-const deleteCategory = async (req, res) => {
+const trashCategory = async (req, res) => {
   try {
     const categoryId = req.params.id;
-    await categoryService.deleteCategory(categoryId);
-    res.status(200).json({ success: true, message: 'Category deleted' });
+    const category = await Category.findById(categoryId);
+
+    if (!category) {
+      return res.status(404).json({ success: false, error: 'Category not found' });
+    }
+
+    category.deleted = true;
+    await category.save();
+    res.status(200).json({ success: true, message: 'Category trashed' });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, error: error.message });
   }
 };
 
-const getTrashCategories = async (req, res) => {
+const restoreCategory = async (req, res) => {
   try {
-    const trashCategories = await categoryService.getTrashCategories();
-    res.status(200).json({ success: true, data: trashCategories });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-};
+    const categoryId = req.params.id;
+    const category = await Category.findOne({ _id: categoryId, deleted: true });
 
-const restoreTrashCategory = async (req, res) => {
-  try {
-    const trashCategoryId = req.params.id;
-    await categoryService.restoreTrashCategory(trashCategoryId);
+    if (!category) {
+      return res.status(404).json({ success: false, error: 'Category not found' });
+    }
+
+    category.deleted = false;
+    await category.save();
     res.status(200).json({ success: true, message: 'Category restored' });
   } catch (error) {
     console.error(error);
@@ -85,12 +100,4 @@ const restoreTrashCategory = async (req, res) => {
   }
 };
 
-module.exports = {
-  createCategory,
-  getCategories,
-  getCategoryById,
-  updateCategory,
-  deleteCategory,
-  getTrashCategories,
-  restoreTrashCategory
-};
+module.exports = { createCategory, getCategories, getCategoryById, updateCategory, trashCategory, restoreCategory };

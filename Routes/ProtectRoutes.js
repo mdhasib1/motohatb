@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const productController = require('../Controllers/Protect.Controllers');
+const {  authenticateToken,
+    authorizeAdmin } = require("../middlewares/authMiddleware");
 
-const {protect, admin} = require("../middlewares/Protect");
-
-router.get('/protect/products', protect, productController.getAllProducts); 
+router.get('/protect/products', authenticateToken, productController.getAllProducts); 
 
 module.exports = router;
